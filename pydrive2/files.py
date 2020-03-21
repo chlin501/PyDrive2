@@ -27,6 +27,13 @@ class FileNotUploadedError(RuntimeError):
 class ApiRequestError(IOError):
     """Error while making any API requests."""
 
+    def __init__(self, ex=None):
+        super().__init__(ex)
+        self.ex = ex
+
+    def exception(self):
+        return self.ex
+
 
 class FileNotDownloadableError(RuntimeError):
     """Error trying to download file that is not downloadable."""
