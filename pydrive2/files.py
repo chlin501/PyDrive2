@@ -26,14 +26,14 @@ class FileNotUploadedError(RuntimeError):
 
 
 class ApiRequestError(IOError):
-    """Error while making any API requests."""
-
     def __init__(self, http_error):
         assert isinstance(http_error, errors.HttpError)
         # Initialize args for backward compatibility
         self.args = (http_error,)
         content = json.loads(http_error.content)
         self.error = content.get("error", {}) if content else {}
+
+        super().__init__("Error while making GDrive API request.")
 
 
 class FileNotDownloadableError(RuntimeError):
@@ -82,7 +82,7 @@ class GoogleDriveFileList(ApiResourceList):
                 .execute(http=self.http)
             )
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
 
         result = []
         for file_metadata in self.metadata["items"]:
@@ -273,7 +273,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
                     .execute(http=self.http)
                 )
             except errors.HttpError as error:
-                raise ApiRequestError(error)
+                raise ApiRequestError(error) from error
             else:
                 self.uploaded = True
                 self.UpdateMetadata(metadata)
@@ -367,7 +367,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
                 .execute(http=self.http)
             )
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             self.GetPermissions()  # Update permissions field.
 
@@ -418,7 +418,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
                 .execute(http=self.http)
             )
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             self.uploaded = True
             self.dirty["content"] = False
@@ -441,7 +441,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
         try:
             self.auth.service.files().untrash(**param).execute(http=self.http)
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             if self.metadata:
                 self.metadata[u"labels"][u"trashed"] = False
@@ -465,7 +465,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
         try:
             self.auth.service.files().trash(**param).execute(http=self.http)
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             if self.metadata:
                 self.metadata[u"labels"][u"trashed"] = True
@@ -490,7 +490,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
         try:
             self.auth.service.files().delete(**param).execute(http=self.http)
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             return True
 
@@ -520,7 +520,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
                 .execute(http=self.http)
             )
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             self.uploaded = True
             self.dirty["content"] = False
@@ -550,7 +550,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
                 .execute(http=self.http)
             )
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             self.UpdateMetadata(metadata)
 
@@ -578,7 +578,8 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
     """
         resp, content = self.http.request(url)
         if resp.status != 200:
-            raise ApiRequestError(errors.HttpError(resp, content, uri=url))
+            http_error = errors.HttpError(resp, content, uri=url)
+            raise ApiRequestError(http_error) from http_error
         return content
 
     @LoadAuth
@@ -597,7 +598,7 @@ class GoogleDriveFile(ApiAttributeMixin, ApiResource):
                 fileId=file_id, permissionId=permission_id
             ).execute()
         except errors.HttpError as error:
-            raise ApiRequestError(error)
+            raise ApiRequestError(error) from error
         else:
             if "permissions" in self and "permissions" in self.metadata:
                 permissions = self["permissions"]
